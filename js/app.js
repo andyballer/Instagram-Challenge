@@ -29,6 +29,31 @@ window.Instagram = {
                 if ( typeof callback === 'function' ) callback( response );
             }
         });
+    },
+
+    parseDate: function(date){
+        var dateArray = date.split("/");
+        console.log(date);
+        console.log(dateArray.length);
+        if(dateArray.length != 3){
+            return null;
+        }
+
+        var formattedDate = new Date(dateArray[2] + "-" + parseInt(dateArray[0], 10) + "-" + parseInt(dateArray[1], 10)); //parseInt, 10 removes leading zeros
+        console.log(formattedDate);
+        return formattedDate;
+
+
+    },
+
+    isBetweenDates: function(date, startDate, endDate){
+        if(date > endDate || date < startDate){
+            return false;
+        }
+
+        return true
+
+
     }
 };
 
@@ -51,24 +76,46 @@ $(document ).ready(function (){
     $( '#form').on('submit', function (e){
         e.preventDefault();
         
-        var tagName = $('#searchBar').val();
+        var tagName = $('#hashtag').val();
+        var startDate = $('#startDate').val();
+        var endDate = $('#endDate').val();
+
+        var start = Instagram.parseDate(startDate)
+        var end = Instagram.parseDate(endDate);
+        if(start === null | end === null){
+            alert("Please enter date in form 'MM/DD/YYYY'");
+            return;
+        }
+
+        if(end < start){
+            alert("Please enter an end date that occurs after the start date");
+            return;
+        }
+                                
+
         Instagram.tagsByName (tagName, function(response){
-            var $instagram = $('#instagram' );
+            var $instagram = $('#instagram');
             $instagram.html('');
             for( var i = 0; i<response.data.length;i++){
+
                 var date = new Date(parseInt(response.data[i].created_time) *1000);
-                var imageURL = response.data[i].images.low_resolution.url;
-                var username = response.data[i].user.username;
+
+                if(Instagram.isBetweenDates(date, start, end)){
+
+                    var imageURL = response.data[i].images.low_resolution.url;
+                    var username = response.data[i].user.username;
                 
-                $instagram.append("\
-                    <div class = 'photo'>\
-                        <img class='image' src='"+imageURL+"' alt='image"+i+"' />\
-                        <p>\
-                            posted on: "+(date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear()+"<br />\
-                            posted by: <a href='https://www.instagram.com/'"+ username +"'/?hl=en>'" + username + "'</a>'\
-                        </p />\
-                    </div />\
-                ");
+                  $instagram.append("\
+                      <div class = 'photo'>\
+                           <img class='image' src='"+imageURL+"' alt='image"+i+"' />\
+                           <p>\
+                                posted on: "+(date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear()+"<br />\
+                                posted by: <a href='https://www.instagram.com/'"+ username +"'/?hl=en>'" + username + "'</a>'\
+                            </p />\
+                        </div />\
+                    ");
+                }
+               // else return;
             }
         });
     });
