@@ -16,7 +16,7 @@ window.Instagram = {
      * Get a list of recently tagged media.
      */
     tagsByName: function( name, callback ) {
-        var endpoint = this.BASE_URL + '/tags/' + name + '/media/recent?access_token=' + this.config.access_token;
+        var endpoint = this.BASE_URL + '/tags/' + name + '/media/recent?count=33&access_token=' + this.config.access_token;
         this.getJSON( endpoint, callback );
     },
 
@@ -29,9 +29,10 @@ window.Instagram = {
             type: 'GET',
             url: url,
             dataType: 'jsonp',
-            success: function( response ) {
+        }).done(function( response ) {
                 if ( typeof callback === 'function' ) callback( response );
-            }
+        }).fail (function (){
+                alert("Error accessing Instagram");
         });
     },
 
@@ -68,19 +69,47 @@ window.Instagram = {
 
     },
 
+    findEndDate: function(response, endDate){
+        var lastPhotoOnPage = response.data[response.data.length -1];
+        var lastDateOnPage = new Date(parseInt(lastPhotoOnPage.created_time) *1000);
+        console.log("end date: " + endDate);
+        console.log("last date on page: "+ lastDateOnPage);
+        if(lastDateOnPage > endDate){
+            return false;
+        }
+        else return true;
+    },
+
+
     /**
     *
-    *loops through each photo on a page and checks if the date matches the query
+    *Loops through each photo on a page and checks if the date matches the query
+    *If it matches, add the photo to our allPhotoResults array, otherwise keep looping
+    *or return because we went too far.
     */
     loopThroughPhotos: function(response, startDate, endDate){
         var dateComparison;
+
         for( var i = 0; i<response.data.length;i++){
+            console.log(response.data[i]);
             var date = new Date(parseInt(response.data[i].created_time) *1000);
             dateComparison = this.compareToDates(date, startDate, endDate);
+            console.log("dateCompare: " + dateComparison);
+            console.log("photo date: " + date);
 
+            //if date is within time range, add to photos to post
             if(dateComparison == 0){
-                photosToPost.push(response.data[i]);
+
+                allPhotoResults.push(response.data[i]);
+                console.log("allPhotoResults: " +allPhotoResults.length);
             }
+
+            //past the requested date, too early
+            if(dateComparison < 0){
+                return dateComparison;
+            }
+
+
         }
         return dateComparison;
     },
@@ -107,74 +136,37 @@ window.Instagram = {
                     </p />\
              </div />\
                     "
-    }
-};
+    },
 
-Instagram.init({
-    access_token: '272855367.b6f7db4.27aee70b486a4fd7b1b5546c1da0453d'
-});
-
-
-/**
-$(document ).ready(function (){
-    Instagram.tagsByName(function (response) {
-        var $instagram = $( '#instagram');
-        for( var i = 0; i<response.data.length;i++){
-            var imageURL = response.data[i].images.standard_resolution.url;
-            $instagram.append( '<img src ="' + imageURL + '" />');
+    /**
+    *Posts images to webpage, 20 at a time
+    */
+    postImages: function(){
+        console.log(allPhotoResults.length);
+        if(allPhotoResults.length == 0){
+            alert("Sorry, no results to display");
         }
-    });
-**/
-$(document ).ready(function (){
-
-    //empty array of photos we will add to if they fit the requirements. global var
-    photosToPost = [];
-
-    $( '#form').on('submit', function (e){
-        e.preventDefault();
-
-        var tagName = $('#hashtag').val();
-        
-        
-        var startDate = $('#startDate').val();
-        var endDate = $('#endDate').val();
-
-        var start = Instagram.parseDate(startDate)
-        var end = Instagram.parseDate(endDate);
-        if(start === null | end === null){
-            alert("Please enter date in form 'MM/DD/YYYY'");
-            return;
-        }
-
-        if(end < start){
-            alert("Please enter an end date that occurs after the start date");
-            return;
-        }
-                        
-        
-        Instagram.tagsByName (tagName, function(response){
-            //nextURL to paginate to, only 20 pics per url
-            var nextURL;
-
-            //find dates requested 
-
-            //check the first 20 images to see if pagination is necessary
-            var isAtStartDate = Instagram.loopThroughPhotos(response, start, end);
-            //if it is, start paginating to get to results from the end date, all the way through start date
-            var x = 10;
-            nextURL = response.pagination.next_url;
-            while(x > 5){ //isAtStartDate >= 0){
-                Instagram.paginate(nextURL, function(response){
-                    isAtStartDate = Instagram.loopThroughPhotos(response, start, end);
-                    nextURL = response.pagination.next_url;
-                });
-                x--;
-            }
-        });
-
         //the div where I will post all the pictures, initialized so I can append the images later
         var $instagram = $('#instagram');
         $instagram.html('');
+
+        //variable used to post pictures to web
+        var photosToPost = [];
+
+        if(allPhotoResults.length <= 20){
+            photosToPost = allPhotoResults;
+            allPhotoResults = [];
+        }
+
+        else{
+            for(var index = 0;index<20;index++){
+                photosToPost.push(allPhotoResults[index]);
+            }
+            //remove the first 20 images from the results because they have been posted
+            allPhotoResults = allPhotoResults.slice(20, allPhotoResults.length);
+        }
+
+
 
         for(var i=0; i<photosToPost.length;i++){
             var photoToPost = photosToPost[i];
@@ -192,12 +184,91 @@ $(document ).ready(function (){
             else {
                 imageURL = photoToPost.videos.low_bandwidth.url;
                 $instagram.append(Instagram.videoHTML(imageURL, username, date, i));
-            }
-
-                
+            }               
 
         }
-        //for i in photos to post, instagram.append photosToPost[i]. paginate .onScroll();
+    }
+};
+
+Instagram.init({
+    access_token: '272855367.b6f7db4.27aee70b486a4fd7b1b5546c1da0453d'
+});
+
+
+$(document ).ready(function (){
+
+    //empty array of photos we will add to if they fit the requirements. global var
+    allPhotoResults = [];
+
+    $( '#form').on('submit', function (e){
+        e.preventDefault();
+
+        console.log("SUBMITTED");
+
+        var tagName = $('#hashtag').val();        
+        var startDate = $('#startDate').val();
+        var endDate = $('#endDate').val();
+
+        var start = Instagram.parseDate(startDate)
+        var end = Instagram.parseDate(endDate);
+
+        console.log(start);
+        console.log(end);
+
+        if(start === null | end === null){
+            alert("Please enter date in form 'MM/DD/YYYY'");
+            return;
+        }
+
+        if(end < start){
+            alert("Please enter an end date that occurs after the start date");
+            return;
+        }
+                        
+        
+        Instagram.tagsByName (tagName, function(response){
+            //nextURL to paginate to, only 33 pics per url
+            var nextURL;
+
+            //find dates requested 
+
+            //check the first 33 images to see if pagination is necessary
+            //end date comes before start date because we go backwards in time
+            var isAtEndDate = Instagram.findEndDate(response, end);
+            var isAtStartDate = 0;
+            //if it is, start paginating to get to results from the end date, all the way through start date
+            //var x = 10;
+            while(!isAtEndDate){
+                console.log("LOOPING");
+                nextURL = response.pagination.next_url;
+                //paginates until end date is found.
+                Instagram.paginate(nextURL, function(nextResponse){
+
+                    isAtEndDate = Instagram.findEndDate(nextResponse, end);
+                    if(isAtEndDate){
+                        //if we're on page with end date, check the page to add photos and for start date
+                        isAtStartDate = Instagram.loopThroughPhotos(nextResponse, start, end);
+                    }
+                    else nextURL = nextResponse.pagination.next_url;
+                });
+                console.log("image paginating!");
+                //x--;
+            }
+            console.log("found end date!");
+
+
+            while(isAtStartDate == 0){
+                console.log("looking for start date");
+                Instagram.paginate(nextURL, function(nextResponse){
+                    isAtStartDate = Instagram.loopThroughPhotos(nextResponse, start, end);
+                    nextURL = nextResponse.pagination.next_url;
+                });
+
+            }
+            console.log("BOOM it works!");
+            Instagram.postImages();
+
+        });
 
     }); 
 });
