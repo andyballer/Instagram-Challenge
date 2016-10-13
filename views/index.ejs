@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang-"en">
+
+	<head>
+		<meta charset="UTF-8">
+		<title> Hashtag Photo Collection </title>
+		<link rel="stylesheet" type="text/css" href="/css/style.css"/>
+	</head>
+
+	<body id = "body">
+		<div id = "title">
+			<h1> Instagram Challenge </h1>
+		</div>
+
+		<div id="instructions">
+			<strong> Instructions: </strong> Please type in a hashtag to search, as well as a start and end date, and then hit enter to see your results. Results will be returned in order, with the most recent images appearing first.
+		</div>
+
+		<form id="form" method="post">
+			<h3> 
+				#: <input type="text" name="hashtag" id="hashtag" value="cattr"/>  
+				Start date: <input type="text" name="startDate" id="startDate" placeholder="mm/dd/yyyy" value="10/04/2016"/>  
+				End Date: <input type="text" name="endDate" id="endDate" placeholder="mm/dd/yyyy" value = "10/05/2016"/>
+			</h3>
+
+			<button> submit </button>
+		</form>
+
+		<div id = "instagram">
+
+		</div>
+
+
+
+
+
+		<footer>
+		<div id = "loadMoreButton">
+			<button onClick="Instagram.postImages()"> Load More </button>
+		</div>
+			<script type="text/javascript" src="/javascript/libraries/jquery-min.js"></script>
+		   <script type="text/javascript" src="javascript/frontEnd.js"></script> 
+		</footer>
+
+	</body>
+
