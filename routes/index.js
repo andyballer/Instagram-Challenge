@@ -5,7 +5,7 @@ const util = require('util');
 /* GET home page. */
 router.get('/', function(req, res, next) {
   console.log("GOT INDEX");
-  res.render('index', { title: 'Express' });
+  res.render('index');
 
 });
 
